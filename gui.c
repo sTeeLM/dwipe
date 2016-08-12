@@ -446,7 +446,9 @@ void dwipe_gui_select( int count, dwipe_context_t* c )
 					/* We don't know how to wipe this device. (Iomega Zip drives.) */
 					wprintw( main_window, " [DISABLE] %s", c[i+offset].label == NULL ? "Unrecognized Device" : c[i+offset].label);
 					break;
-
+				case DWIPE_SELECT_SKIPPED:
+                                        wprintw( main_window, " [SKIPPED] %s", c[i+offset].label == NULL ? "Unrecognized Device" : c[i+offset].label);
+                                        break;
 				default:
 					
 					/* TODO: Handle the sanity error. */

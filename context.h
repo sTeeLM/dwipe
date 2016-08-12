@@ -49,7 +49,8 @@ typedef enum dwipe_select_t_
 	DWIPE_SELECT_TRUE_PARENT,  /* A parent of this device has been selected, so the wipe is implied.       */
 	DWIPE_SELECT_FALSE,        /* Do not wipe this device.                                                 */
 	DWIPE_SELECT_FALSE_CHILD,  /* A child of this device has been selected, so we can't wipe this device.  */
-	DWIPE_SELECT_DISABLED      /* Do not wipe this device and do not allow it to be selected.              */
+	DWIPE_SELECT_DISABLED,     /* Do not wipe this device and do not allow it to be selected.              */
+	DWIPE_SELECT_SKIPPED       /* Skipped */
 } dwipe_select_t;
 
 

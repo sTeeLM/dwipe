@@ -303,21 +303,23 @@ int main( int argc, char** argv )
 
         if(dwipe_options.exclude && !strcmp(c1[i].device_name, dwipe_options.exclude)) 
         {
-            c1[i].select = DWIPE_SELECT_DISABLED;
+            c1[i].select = DWIPE_SELECT_SKIPPED;
             dwipe_log( DWIPE_LOG_INFO, "Device '%s' is excluded.", c1[i].device_name);
         }
 
 		if( dwipe_options.autonuke )
 		{
 			/* When the autonuke option is set, select all disks. */
-			if( c1[i].device_part == 0 && c1[i].select != DWIPE_SELECT_DISABLED) { c1[i].select = DWIPE_SELECT_TRUE; }
-			else if( c1[i].select != DWIPE_SELECT_DISABLED) { c1[i].select = DWIPE_SELECT_TRUE_PARENT; }
+			if( c1[i].device_part == 0 && c1[i].select != DWIPE_SELECT_DISABLED && c1[i].select != DWIPE_SELECT_SKIPPED)
+				{ c1[i].select = DWIPE_SELECT_TRUE; }
+			else if( c1[i].select != DWIPE_SELECT_DISABLED && c1[i].select != DWIPE_SELECT_SKIPPED) 
+				{ c1[i].select = DWIPE_SELECT_TRUE_PARENT; }
 		}
 
 		else
 		{
 			/* The user must manually select devices. */
-            if(c1[i].select != DWIPE_SELECT_DISABLED)
+            if(c1[i].select != DWIPE_SELECT_DISABLED && c1[i].select != DWIPE_SELECT_SKIPPED)
 			    c1[i].select = DWIPE_SELECT_FALSE;
 		}
 
