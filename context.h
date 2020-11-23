@@ -80,6 +80,7 @@ typedef struct dwipe_context_t_
 	int               device_major;  /* The major device number.                                    */
 	int               device_minor;  /* The minor device number.                                    */
 	int               device_part;   /* The device partition or slice number.                       */
+    char*             device_parent; /* If device_part != 0, device_parent is device_name of disk   */
 	char*             device_name;   /* The device file name.                                       */
 	loff_t            device_size;   /* The device size in bytes.                                   */
 	struct stat       device_stat;   /* The device file state from fstat().                         */
