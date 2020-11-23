@@ -108,7 +108,7 @@ int dwipe_options_parse( int argc, char** argv )
 	dwipe_options.banner = malloc( dwipe_banner_size );
 
 	/* Set the default product banner. */
-	snprintf( dwipe_options.banner, dwipe_banner_size, "Darik's Wipe version %s(modified by sTeeL<steel.mental@gmail.com>)", DBAN_VERSION );
+	snprintf( dwipe_options.banner, dwipe_banner_size, "Darik's Wipe version %s(modified by sTeeLM<steel.mental@gmail.com>)", DBAN_VERSION );
 
 
 	/* Set default options. */

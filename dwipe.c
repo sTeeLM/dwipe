@@ -61,6 +61,9 @@ int main( int argc, char** argv )
 	int dwipe_selected = 0; /* The number of contexts that have been selected.   */
 	int dwipe_shmid;        /* A shared memory handle for the context array.     */
 	int dwipe_wait  = 0;    /* The number of child processes that have returned. */
+    
+    /* Exclude device by command */
+    dwipe_context_t * dwipe_exclude_device = NULL;
 
 	/* The list of device filenames. */
 	char** dwipe_names = NULL;
@@ -305,6 +308,26 @@ int main( int argc, char** argv )
         {
             c1[i].select = DWIPE_SELECT_SKIPPED;
             dwipe_log( DWIPE_LOG_INFO, "Device '%s' is excluded.", c1[i].device_name);
+
+            if(c1[i].device_part == 0) // if device is a disk, exclude all partations
+            {
+                dwipe_exclude_device = &c1[i]; // save dwipe_exclude_device
+            }
+        }
+
+        // trick: disk always processed before it's partations
+        if(dwipe_exclude_device) 
+        {
+            if(c1[i].device_type       == dwipe_exclude_device->device_type
+                && c1[i].device_host   == dwipe_exclude_device->device_host
+                && c1[i].device_bus    == dwipe_exclude_device->device_bus
+                && c1[i].device_target == dwipe_exclude_device->device_target
+                && c1[i].device_lun    == dwipe_exclude_device->device_lun
+                && c1[i].device_part > 0)
+            {
+                c1[i].select = DWIPE_SELECT_SKIPPED;
+                dwipe_log( DWIPE_LOG_INFO, "Device '%s' is excluded.", c1[i].device_name);
+            }
         }
 
 		if( dwipe_options.autonuke )
@@ -315,7 +338,6 @@ int main( int argc, char** argv )
 			else if( c1[i].select != DWIPE_SELECT_DISABLED && c1[i].select != DWIPE_SELECT_SKIPPED) 
 				{ c1[i].select = DWIPE_SELECT_TRUE_PARENT; }
 		}
-
 		else
 		{
 			/* The user must manually select devices. */
@@ -349,7 +371,6 @@ int main( int argc, char** argv )
 		/* Get device selections from the user. */
 		dwipe_gui_select( dwipe_enumerated, c1 );
 	}
-
 
 	/* Count the number of selected contexts. */
 	for( i = 0 ; i < dwipe_enumerated ; i++ )

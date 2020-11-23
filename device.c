@@ -20,6 +20,7 @@
 
 #include <netinet/in.h>
 #include <string.h>
+#include <scsi/scsi.h>
 
 #include "dwipe.h"
 #include "context.h"
@@ -69,6 +70,12 @@ int dwipe_is_partition(const char * name)
     return 0;
 }
 
+
+struct my_scsi_idlun {
+    int four_in_one;    /* 4 separate bytes of info compacted into 1 int */
+    int host_unique_id; /* distinguishes adapter cards from same supplier */
+};
+
 void dwipe_device_identify( dwipe_context_t* c )
 {
     /**
@@ -82,41 +89,66 @@ void dwipe_device_identify( dwipe_context_t* c )
     char buffer [FILENAME_MAX];
     FILE* fp = NULL;
     int size = 0;
+    struct my_scsi_idlun sg_scsi;
 
     dwipe_log( DWIPE_LOG_INFO, "dwipe_device_identify '%s' .", c->device_name );
 
     /* Names in the partition file do not have the '/dev/' prefix. */
-    char dprefix [] = DWIPE_KNOB_PARTITIONS_PREFIX;
+    const char dprefix [] = DWIPE_KNOB_PARTITIONS_PREFIX;
 
     /* Allocate memory for the label. */
     c->label = malloc( DWIPE_KNOB_LABEL_SIZE );
     if(!c->label)
         return;
+    memset(c->label, 0, DWIPE_KNOB_LABEL_SIZE);
+
+    if(ioctl(c->device_fd, SCSI_IOCTL_GET_IDLUN, &sg_scsi) != 0) 
+    {
+        dwipe_log( DWIPE_LOG_ERROR, "Error: Probe device %s SCSI ID error %d on fd %d.\n", c->device_name, errno, c->device_fd);
+        goto err;
+    } 
+    else 
+    {
+        // (scsi_device_id | (lun << 8) | (channel << 16) | (host_no << 24))
+        c->device_host = ((sg_scsi.four_in_one) & 0xFF000000) >> 24;
+        c->device_bus = ((sg_scsi.four_in_one)  & 0x00FF0000) >> 16;
+        c->device_lun = ((sg_scsi.four_in_one)  & 0x0000FF00) >> 8;
+        c->device_target = ((sg_scsi.four_in_one) & 0xFF);
+
+        dwipe_log( DWIPE_LOG_INFO, "Device %s at [%08x:%08x] = [Host:Channel:TargetId:Lun] [%d:%d:%d:%d].", 
+            c->device_name, 
+            sg_scsi.four_in_one,
+            sg_scsi.host_unique_id,
+            c->device_host, c->device_bus, c->device_target, c->device_lun);
+    }
 
     if(dwipe_is_partition(&(c->device_name[strlen(dprefix)])))
     {
-        int partition = 0;
-        strncpy( c->label, " PART ", DWIPE_KNOB_LABEL_SIZE);
+        strncpy( c->label, "  |------PARTATION ", DWIPE_KNOB_LABEL_SIZE);
         size = strlen(c->label);
         c->label[size - 1] = ' ';
+        dwipe_log( DWIPE_LOG_ERROR, "size0 is %d", size);
 
         snprintf(buffer, sizeof(buffer), "/sys/class/block/%s/partition",  &(c->device_name[strlen(dprefix)]));
+        buffer[FILENAME_MAX - 1] = 0;
+
         fp = fopen( buffer, "r" );
         if( fp == NULL )
         {
-            dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to open '%s'.\n", buffer );
+            dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to open '%s'.", buffer );
             goto err;
         }
 
         if( fgets( buffer, sizeof(buffer), fp ) != NULL )
         {
-            strncpy( c->label + size, buffer, DWIPE_KNOB_LABEL_SIZE );
+            strncpy( c->label + size, buffer, DWIPE_KNOB_LABEL_SIZE - size );
             size = strlen(c->label);
             c->label[size - 1] = ' ';
+            dwipe_log( DWIPE_LOG_ERROR, "size1 is %d", size);
 
             if( sscanf (buffer, "%i", &(c->device_part)) != 1) 
             {
-                dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to read device partition '%s'.\n", c->device_name );
+                dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to read device partition number'%s'.", c->device_name );
                 goto err;
             }
         }
@@ -129,48 +161,16 @@ void dwipe_device_identify( dwipe_context_t* c )
         fclose(fp);
         fp = NULL;
 
-        snprintf(buffer, sizeof(buffer), "%s",  &(c->device_name[strlen(dprefix)]));
-        memset( buffer, 0, sizeof(buffer));
-        int ret;
-        if( (ret = sscanf (&(c->device_name[strlen(dprefix)]), "%s%i", buffer, &partition)) != 2) 
-        {
-            dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to probe device partition '%s'(%s) ret is %d.\n", 
-                c->device_name, &(c->device_name[strlen(dprefix)]), ret);
-            goto err;
-        }
-
-        if(partition != c->device_part) 
-        {
-            dwipe_log( DWIPE_LOG_ERROR, "Error: Probe device partition '%s' error: partition != c->device_part.\n", c->device_name );
-            goto err;
-        }
-
-        c->device_parent = strdup(buffer);
-        if(!c->device_parent)
-        {
-            dwipe_log( DWIPE_LOG_ERROR, "Error: Probe device partition '%s' error: no memory.\n", c->device_name );
-            goto err;
-        }
-
-        dwipe_log( DWIPE_LOG_INFO, "Success identify PART %s c->device_name, device_parent %s, partition number is %d\n", 
-            c->device_name, c->device_parent, c->device_part);
-
     } else {
-
-        c->device_parent = strdup(&(c->device_name[strlen(dprefix)]));
-        if(!c->device_parent)
-        {
-            dwipe_log( DWIPE_LOG_ERROR, "Error: Probe device partition '%s' error: no memory.\n", c->device_name );
-            goto err;
-        }
 
         /* read /sys/class/block/%s/device/vendor */
         snprintf(buffer, sizeof(buffer), "/sys/class/block/%s/device/vendor",  &(c->device_name[strlen(dprefix)]));
-        fp = fopen( buffer, "r" );
+        buffer[FILENAME_MAX - 1] = 0;
 
+        fp = fopen( buffer, "r" );
         if( fp == NULL )
         {
-            dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to open '%s'.\n", buffer );
+            dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to open '%s'.", buffer );
             goto err;
         }
 
@@ -179,6 +179,7 @@ void dwipe_device_identify( dwipe_context_t* c )
             strncpy( c->label, buffer, DWIPE_KNOB_LABEL_SIZE );
             size = strlen(c->label);
             c->label[size - 1] = ' ';
+            dwipe_log( DWIPE_LOG_ERROR, "size2 is %d", size);
         }
         else
         {
@@ -191,10 +192,12 @@ void dwipe_device_identify( dwipe_context_t* c )
 
         /* read /sys/class/block/%s/device/model */
         snprintf(buffer, sizeof(buffer), "/sys/class/block/%s/device/model",  &(c->device_name[strlen(dprefix)]));
+        buffer[FILENAME_MAX - 1] = 0;
+
         fp = fopen( buffer, "r" );
         if( fp == NULL )
         {
-            dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to open '%s'.\n", buffer );
+            dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to open '%s'.", buffer );
             goto err;
         }
 
@@ -203,6 +206,7 @@ void dwipe_device_identify( dwipe_context_t* c )
             strncpy( c->label + size, buffer, DWIPE_KNOB_LABEL_SIZE - size );
             size = strlen(c->label);
             c->label[size - 1] = ' ';
+            dwipe_log( DWIPE_LOG_ERROR, "size3 is %d", size);
         }
         else
         {
@@ -214,10 +218,12 @@ void dwipe_device_identify( dwipe_context_t* c )
 
         /* /sys/class/block/%s/device/rev */
         snprintf(buffer, sizeof(buffer), "/sys/class/block/%s/device/rev",  &(c->device_name[strlen(dprefix)]));
+        buffer[FILENAME_MAX - 1] = 0;
+
         fp = fopen( buffer, "r" );
         if( fp == NULL )
         {
-            dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to open '%s'.\n", buffer );
+            dwipe_log( DWIPE_LOG_ERROR, "Error: Unable to open '%s'.", buffer );
             goto err;
         }
 
@@ -226,6 +232,7 @@ void dwipe_device_identify( dwipe_context_t* c )
             strncpy( c->label + size, buffer, DWIPE_KNOB_LABEL_SIZE - size );
             size = strlen(c->label);
             c->label[size - 1] = ' ';
+            dwipe_log( DWIPE_LOG_ERROR, "size4 is %d", size);
         }
         else
         {
@@ -234,19 +241,24 @@ void dwipe_device_identify( dwipe_context_t* c )
         }
         fclose(fp);
         fp = NULL;
-
-        dwipe_log( DWIPE_LOG_INFO, "Success identify DISK %s, device_parent %s, partition number is %d\n", 
-            c->device_name, c->device_parent, c->device_part);
     }
 
+    dwipe_log( DWIPE_LOG_ERROR, "size5 is %d", size);
     dwipe_device_strsize(c->label + size, DWIPE_KNOB_LABEL_SIZE - size, c->device_size);
+    c->label[DWIPE_KNOB_LABEL_SIZE - 1] = 0;
+
+    return;
+
 err:
     if( fp != NULL )
     {
         fclose(fp);
         fp = NULL;
     }
-
+    if(c->label) 
+    {
+        c->label[DWIPE_KNOB_LABEL_SIZE - 1] = 0;
+    }
 } /* dwipe_device_identify */
 
 

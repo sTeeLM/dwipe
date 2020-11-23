@@ -25,7 +25,7 @@
 /* Program knobs. */
 #define DWIPE_KNOB_ENTROPY                "/dev/urandom"
 #define DWIPE_KNOB_IDENTITY_SIZE          512
-#define DWIPE_KNOB_LABEL_SIZE             128
+#define DWIPE_KNOB_LABEL_SIZE             512
 #define DWIPE_KNOB_LOADAVG                "/proc/loadavg"
 #define DWIPE_KNOB_LOG_BUFFERSIZE         1024                /* Maximum length of a log event. */
 #define DWIPE_KNOB_PARTITIONS             "/proc/partitions"
@@ -34,7 +34,7 @@
 #define DWIPE_KNOB_SCSI                   "/proc/scsi/scsi"
 #define DWIPE_KNOB_SLEEP                  1
 #define DWIPE_KNOB_STAT                   "/proc/stat"
-#define DBAN_VERSION                      "2.1.1"
+#define DBAN_VERSION                      "2.2.1"
 
 /* FIXME: This should be a command line option. */
 #define DWIPE_KNOB_LOGFILE "/var/log/dban/dwipe.txt"

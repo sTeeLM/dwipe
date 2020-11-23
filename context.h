@@ -76,16 +76,15 @@ typedef struct dwipe_context_t_
 	int               device_fd;     /* The file descriptor of the device file being wiped.         */
 	int               device_host;   /* The host number.                                            */
 	struct hd_driveid device_id;     /* The WIN_IDENTIFY data for IDE drives.                       */
+	int               device_target; /* The device target.                                          */
 	int               device_lun;    /* The device logical unit number.                             */
 	int               device_major;  /* The major device number.                                    */
 	int               device_minor;  /* The minor device number.                                    */
 	int               device_part;   /* The device partition or slice number.                       */
-    char*             device_parent; /* If device_part != 0, device_parent is device_name of disk   */
 	char*             device_name;   /* The device file name.                                       */
 	loff_t            device_size;   /* The device size in bytes.                                   */
 	struct stat       device_stat;   /* The device file state from fstat().                         */
 	dwipe_device_t    device_type;   /* Indicates an IDE, SCSI, or Compaq SMART device.             */
-	int               device_target; /* The device target.                                          */
 	u64               eta;           /* The estimated number of seconds until method completion.    */
 	int               entropy_fd;    /* The entropy source. Usually /dev/urandom.                   */
 	char*             label;         /* The string that we will show the user.                      */

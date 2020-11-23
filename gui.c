@@ -420,34 +420,34 @@ void dwipe_gui_select( int count, dwipe_context_t* c )
 				case DWIPE_SELECT_TRUE:
 
 					/* Print a selected element. */
-					wprintw( main_window, " [  WIPE ] %s", c[i+offset].label );
+					wprintw( main_window, " [   WIPE  ] %s", c[i+offset].label );
 					break;
 
 				case DWIPE_SELECT_FALSE:
 
 					/* Print an element that is not selected. */
-					wprintw( main_window, " [       ] %s", c[i+offset].label );
+					wprintw( main_window, " [         ] %s", c[i+offset].label );
 					break;
 
 				case DWIPE_SELECT_TRUE_PARENT:
 
 					/* This element will be wiped when its parent is wiped. */
-					wprintw( main_window, " [*******] %s", c[i+offset].label );
+					wprintw( main_window, " [*********] %s", c[i+offset].label );
 					break;
 
 				case DWIPE_SELECT_FALSE_CHILD:
 
 					/* We can't wipe this element because it has a child that is being wiped. */
-					wprintw( main_window, " [-------] %s", c[i+offset].label );
+					wprintw( main_window, " [---------] %s", c[i+offset].label );
 					break;
 
 				case DWIPE_SELECT_DISABLED:
 
 					/* We don't know how to wipe this device. (Iomega Zip drives.) */
-					wprintw( main_window, " [DISABLE] %s", c[i+offset].label == NULL ? "Unrecognized Device" : c[i+offset].label);
+					wprintw( main_window, " [ DISABLE ] %s", c[i+offset].label == NULL ? "Unrecognized Device" : c[i+offset].label);
 					break;
 				case DWIPE_SELECT_SKIPPED:
-                                        wprintw( main_window, " [SKIPPED] %s", c[i+offset].label == NULL ? "Unrecognized Device" : c[i+offset].label);
+                                        wprintw( main_window, " [ SKIPPED ] %s", c[i+offset].label == NULL ? "Unrecognized Device" : c[i+offset].label);
                                         break;
 				default:
 					
@@ -557,7 +557,8 @@ void dwipe_gui_select( int count, dwipe_context_t* c )
 								&& c[i].device_part   > 0
 							)
 							{
-								c[i].select = DWIPE_SELECT_FALSE;
+                                if(c[i].select != DWIPE_SELECT_SKIPPED)
+								    c[i].select = DWIPE_SELECT_FALSE;
 							}
 
 						} /* for all contexts */
@@ -604,7 +605,8 @@ void dwipe_gui_select( int count, dwipe_context_t* c )
 								)
 								{
 									/* Enable the disk element. */
-									c[i].select = DWIPE_SELECT_FALSE;
+                                    if(c[i].select != DWIPE_SELECT_SKIPPED)
+									    c[i].select = DWIPE_SELECT_FALSE;
 								}
 
 							} /* for all contexts */
@@ -637,7 +639,8 @@ void dwipe_gui_select( int count, dwipe_context_t* c )
 								&& c[i].device_part   > 0
 							)
 							{
-								c[i].select = DWIPE_SELECT_TRUE_PARENT;
+                                if(c[i].select != DWIPE_SELECT_SKIPPED)
+								    c[i].select = DWIPE_SELECT_TRUE_PARENT;
 							}
 
 						} /* for */
@@ -661,7 +664,8 @@ void dwipe_gui_select( int count, dwipe_context_t* c )
 								&& c[i].device_part   == 0
 							)
 							{
-								c[i].select = DWIPE_SELECT_FALSE_CHILD;
+                                if(c[i].select != DWIPE_SELECT_SKIPPED)
+								    c[i].select = DWIPE_SELECT_FALSE_CHILD;
 							}
 						}
 
